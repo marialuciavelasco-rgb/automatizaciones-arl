@@ -27,7 +27,7 @@ async def main():
         sys.exit(1)
 
     logger.info("Leyendo datos desde Google Sheets...")
-    resultado = leer_sheets()
+    resultado = leer_sheets("AutomatizacionesRRHH")
     registros = resultado.get("registros", [])
     logger.info(f"Hoja: {resultado.get('hoja_usada')} | Registros: {len(registros)}")
 
