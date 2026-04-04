@@ -24,12 +24,17 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Instalar dependencias
+      # 🔥 FIX REAL AQUÍ
+      - name: Instalar dependencias (Playwright actualizado)
         run: |
+          pip install --upgrade pip
+          pip install --upgrade playwright
           pip install -r requirements.txt
 
-      - name: Instalar Playwright (FIX)
-        run: playwright install chromium --no-deps
+      # 🔥 FIX REAL AQUÍ
+      - name: Instalar Playwright correctamente
+        run: |
+          python -m playwright install chromium
 
       - name: Crear archivo de credenciales Firebase
         run: |
