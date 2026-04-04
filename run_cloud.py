@@ -36,22 +36,29 @@ async def main():
         return
 
     # 2. Transformar y guardar en Firebase
-    from modules.transformer import transformar_registros
+    from modules.transformer import transformar_lote
     import modules.firebase_client as fb
 
-    transformados = transformar_registros(registros)
+    transformados = transformar_lote(registros)
     nuevos = actualizados = 0
 
-    for datos in transformados:
-        num_doc = str(datos.get("numero_documento", "")).strip()
+    for resultado in transformados:
+        datos_orig       = resultado["datos_originales"]
+        datos_tx         = resultado["datos_transformados"]
+        campos_faltantes = resultado["campos_faltantes"]
+        advertencias     = resultado["advertencias"]
+
+        num_doc = str(datos_orig.get("numero_doc", "")).strip()
         if not num_doc:
             continue
-        existe = fb.obtener_por_id(num_doc)
-        if existe and existe.get("estado") == "completado":
-            logger.debug(f"  {datos.get('nombre_empleado')} → ya completado, omitiendo")
+
+        existente = fb.buscar_por_documento(num_doc)
+        if existente and existente.get("estado") == "completado":
+            logger.debug(f"  {datos_orig.get('colaborador')} → ya completado, omitiendo")
             continue
-        fb.crear_afiliacion(datos)
-        if existe:
+
+        fb.crear_afiliacion(datos_orig, datos_tx, campos_faltantes, advertencias)
+        if existente:
             actualizados += 1
         else:
             nuevos += 1
@@ -67,7 +74,8 @@ async def main():
         return
 
     logger.info(f"Procesando {len(pendientes)} afiliación(es) pendiente(s)...")
-    await ejecutar_proceso_completo(pendientes)
+    doc_ids = [d["id"] for d in pendientes]
+    await ejecutar_proceso_completo(doc_ids=doc_ids)
 
     # 4. Resumen final
     conteos = fb.contar_por_estado()
