@@ -28,10 +28,8 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Instalar Playwright + Chromium
-        run: |
-          playwright install chromium
-          playwright install-deps chromium
+      - name: Instalar Playwright (FIX)
+        run: playwright install chromium --no-deps
 
       - name: Crear archivo de credenciales Firebase
         run: |
