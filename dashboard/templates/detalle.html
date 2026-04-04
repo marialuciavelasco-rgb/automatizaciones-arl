@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle — {{ a.nombre_empleado }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="header-left">
+        <a href="{{ url_for('index') }}" class="back-link">← Volver al panel</a>
+        <h1>{{ estado_iconos.get(a.estado, '') }} {{ a.nombre_empleado }}</h1>
+        <span class="badge {{ estado_colores.get(a.estado, '') }} badge-lg">
+          {{ a.estado | replace('_', ' ') | title }}
+        </span>
+      </div>
+      <div class="header-right">
+        {% if a.estado == 'requiere_intervencion' %}
+          <a href="{{ url_for('editar', doc_id=a.id) }}" class="btn btn-danger">
+            ✏️ Completar datos faltantes
+          </a>
+        {% endif %}
+
+        {% if a.estado in ('error', 'requiere_intervencion') %}
+          <form method="POST" action="{{ url_for('reiniciar', doc_id=a.id) }}"
+                style="display:inline;"
+                onsubmit="return confirm('¿Reiniciar este registro? Se resetean los intentos y vuelve a pendiente.')">
+            <button type="submit" class="btn btn-warning">
+              🔄 Reiniciar para reintento
+            </button>
+          </form>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('eliminar', doc_id=a.id) }}"
+              style="display:inline;"
+              onsubmit="return confirm('⚠️ ¿Eliminar PERMANENTEMENTE el registro de {{ a.nombre_empleado }}? Esta acción no se puede deshacer.')">
+          <button type="submit" class="btn btn-dark">
+            🗑️ Eliminar registro
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Campos faltantes -->
+    {% if a.campos_faltantes %}
+    <div class="alert alert-danger">
+      <strong>🔴 Campos que faltan:</strong>
+      {% for campo in a.campos_faltantes %}
+        <span class="tag-campo">{{ labels.get(campo, campo) }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Resultado si está completado -->
+    {% if a.resultado %}
+    <div class="alert alert-success">
+      ✅ <strong>Afiliación exitosa</strong>
+      {% if a.resultado.numero_afiliacion %}
+        · N° {{ a.resultado.numero_afiliacion }}
+      {% endif %}
+      <br>{{ a.resultado.mensaje }}
+    </div>
+    {% endif %}
+
+    <div class="detalle-grid">
+
+      <!-- Datos Transformados -->
+      <div class="detalle-seccion">
+        <h3>📋 Datos para el Portal ARL</h3>
+        {% set tx = a.datos_transformados %}
+        <table class="tabla-detalle">
+          {% for campo, label in labels.items() %}
+            {% if tx.get(campo) is not none %}
+            <tr>
+              <td class="campo-label">{{ label }}</td>
+              <td>{{ tx.get(campo, '—') }}</td>
+            </tr>
+            {% endif %}
+          {% endfor %}
+        </table>
+      </div>
+
+      <!-- Datos Originales del Excel -->
+      <div class="detalle-seccion">
+        <h3>📊 Datos Originales (Excel)</h3>
+        {% set orig = a.datos_originales %}
+        <table class="tabla-detalle">
+          <tr><td class="campo-label">Colaborador</td><td>{{ orig.get('colaborador', '—') }}</td></tr>
+          <tr><td class="campo-label">Empresa</td><td>{{ orig.get('compania', '—') }}</td></tr>
+          <tr><td class="campo-label">Documento</td><td>{{ orig.get('tipo_doc', '') }} {{ orig.get('numero_doc', '—') }}</td></tr>
+          <tr><td class="campo-label">Cargo</td><td>{{ orig.get('cargo', '—') }}</td></tr>
+          <tr><td class="campo-label">Salario</td><td>$ {{ "{:,}".format(orig.get('salario', 0)) }}</td></tr>
+          <tr><td class="campo-label">Fecha ingreso</td><td>{{ orig.get('fecha_ingreso', '—') }}</td></tr>
+          <tr><td class="campo-label">EPS</td><td>{{ orig.get('eps', '—') }}</td></tr>
+          <tr><td class="campo-label">AFP</td><td>{{ orig.get('afp', '—') }}</td></tr>
+          <tr><td class="campo-label">Ciudad</td><td>{{ orig.get('ciudad', '—') }}</td></tr>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Campos manuales guardados -->
+    {% if a.campos_manuales %}
+    <div class="section">
+      <h3>👤 Datos Completados Manualmente</h3>
+      <table class="tabla-detalle">
+        {% for campo, valor in a.campos_manuales.items() %}
+        <tr>
+          <td class="campo-label">{{ labels.get(campo, campo) }}</td>
+          <td>{{ valor }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endif %}
+
+    <!-- Historial de logs -->
+    <div class="section">
+      <h3>📜 Historial de Actividad</h3>
+      <div class="logs-container">
+        {% if a.logs %}
+          {% for log in a.logs | reverse %}
+          <div class="log-item log-{{ log.nivel | lower }}">
+            <span class="log-time">{{ log.timestamp[:19] | replace('T', ' ') }}</span>
+            <span class="log-nivel">{{ log.nivel }}</span>
+            <span class="log-paso">{{ log.paso }}</span>
+            <span class="log-msg">{{ log.mensaje }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p>Sin actividad registrada.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Info técnica -->
+    <div class="info-tecnica">
+      <small>
+        ID: {{ a.id }} |
+        Intentos: {{ a.intentos }} |
+        Creado: {{ a.fecha_creacion }}
+      </small>
+      {% if a.error_detalle %}
+        <br><small class="texto-rojo">Error: {{ a.error_detalle }}</small>
+      {% endif %}
+    </div>
+
+  </div>
+</body>
+</html>

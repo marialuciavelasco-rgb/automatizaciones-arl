@@ -1,0 +1,53 @@
+name: ARL Automation RPA
+
+on:
+  # Trigger manual desde el dashboard web
+  workflow_dispatch:
+
+  # Ejecución automática diaria — 7 AM hora Colombia (UTC-5 = 12:00 UTC)
+  schedule:
+    - cron: "0 12 * * 1-5"   # Lunes a Viernes a las 7 AM Colombia
+
+jobs:
+  ejecutar-rpa:
+    name: Procesar afiliaciones ARL
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+
+      - name: Instalar Playwright + Chromium
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Crear archivo de credenciales Firebase
+        run: |
+          echo '${{ secrets.FIREBASE_KEY_JSON }}' > config/firebase_key.json
+
+      - name: Crear archivo de credenciales Google Sheets
+        run: |
+          echo '${{ secrets.SHEETS_KEY_JSON }}' > config/sheets_key.json
+
+      - name: Ejecutar automatización RPA
+        env:
+          ARL_USUARIO:    ${{ secrets.ARL_USUARIO }}
+          ARL_PASSWORD:   ${{ secrets.ARL_PASSWORD }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          GOOGLE_SHEETS_ID:    ${{ secrets.GOOGLE_SHEETS_ID }}
+          GOOGLE_SHEETS_CREDENTIALS_PATH: config/sheets_key.json
+          HEADLESS: "True"
+        run: |
+          python3 run_cloud.py

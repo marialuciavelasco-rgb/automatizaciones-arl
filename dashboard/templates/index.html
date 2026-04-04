@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARL Automation — Panel de Control</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <h1>🏥 ARL Automation</h1>
+        <p>Seguros Bolívar · BIA Technologies & BIA Energy</p>
+      </div>
+      <div class="header-right">
+        {% if github_configurado %}
+        <button id="btn-ejecutar" class="btn btn-success" onclick="ejecutarRPA()">▶ Ejecutar ahora</button>
+        {% endif %}
+        <a href="/" class="btn btn-outline">↻ Actualizar</a>
+        <a href="/logout" class="btn btn-outline" style="color:#dc2626">Salir</a>
+      </div>
+    </div>
+
+    <!-- Alertas Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Tarjetas de resumen -->
+    <div class="cards-grid">
+      <div class="card card-warning">
+        <div class="card-num">{{ conteos.pendiente }}</div>
+        <div class="card-label">⏳ Pendientes</div>
+      </div>
+      <div class="card card-info">
+        <div class="card-num">{{ conteos.en_proceso }}</div>
+        <div class="card-label">⚙️ En Proceso</div>
+      </div>
+      <div class="card card-danger">
+        <div class="card-num">{{ conteos.requiere_intervencion }}</div>
+        <div class="card-label">🔴 Requieren Revisión</div>
+      </div>
+      <div class="card card-success">
+        <div class="card-num">{{ conteos.completado }}</div>
+        <div class="card-label">✅ Completados</div>
+      </div>
+      <div class="card card-dark">
+        <div class="card-num">{{ conteos.error }}</div>
+        <div class="card-label">❌ Errores</div>
+      </div>
+    </div>
+
+    <!-- Aviso importante si hay revisiones pendientes -->
+    {% if conteos.requiere_intervencion > 0 %}
+    <div class="alert alert-danger">
+      🔴 <strong>{{ conteos.requiere_intervencion }} afiliación(es) requieren tu atención</strong> —
+      Haz click en cada una para completar los datos faltantes.
+    </div>
+    {% endif %}
+
+    <!-- Tabla de afiliaciones -->
+    <div class="section">
+      <h2>Todas las Afiliaciones</h2>
+
+      <!-- Filtros -->
+      <div class="filtros">
+        <button class="btn-filtro active" data-estado="todos">Todos</button>
+        <button class="btn-filtro" data-estado="requiere_intervencion">🔴 Necesitan revisión</button>
+        <button class="btn-filtro" data-estado="pendiente">⏳ Pendientes</button>
+        <button class="btn-filtro" data-estado="completado">✅ Completados</button>
+        <button class="btn-filtro" data-estado="error">❌ Errores</button>
+      </div>
+
+      {% if afiliaciones %}
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Empleado</th>
+            <th>Empresa</th>
+            <th>Documento</th>
+            <th>Creado</th>
+            <th>Intentos</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in afiliaciones %}
+          <tr class="fila-estado-{{ a.estado }}">
+            <td>
+              <span class="badge {{ estado_colores.get(a.estado, 'badge-secondary') }}">
+                {{ estado_iconos.get(a.estado, '') }} {{ a.estado | replace('_', ' ') | title }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ a.nombre_empleado }}</strong>
+              {% if a.campos_faltantes %}
+                <br><small class="texto-rojo">Faltan: {{ a.campos_faltantes | join(', ') }}</small>
+              {% endif %}
+            </td>
+            <td><small>{{ a.empresa }}</small></td>
+            <td>{{ a.documento_empleado }}</td>
+            <td>
+              <small>
+                {% if a.fecha_creacion %}
+                  {{ a.fecha_creacion.strftime('%d/%m/%Y') if a.fecha_creacion else '' }}
+                {% endif %}
+              </small>
+            </td>
+            <td>{{ a.intentos }}</td>
+            <td>
+              {% if a.estado == 'requiere_intervencion' %}
+                <a href="{{ url_for('editar', doc_id=a.id) }}" class="btn btn-danger btn-sm">
+                  ✏️ Completar datos
+                </a>
+              {% else %}
+                <a href="{{ url_for('detalle', doc_id=a.id) }}" class="btn btn-outline btn-sm">
+                  Ver detalle
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">
+        <p>📋 No hay afiliaciones registradas todavía.</p>
+        <p>Ejecuta el sistema desde la terminal para procesar el Excel.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Instrucciones -->
+    <div class="instrucciones">
+      <h3>¿Cómo usar este panel?</h3>
+      <ol>
+        <li>Las afiliaciones con 🔴 <strong>requieren tu intervención</strong> — les faltan datos.</li>
+        <li>Haz click en <strong>"✏️ Completar datos"</strong> para llenar los campos faltantes.</li>
+        <li>Después de guardar, vuelve a la terminal y ejecuta la opción <strong>"Reintentar casos con revisión"</strong>.</li>
+        <li>El sistema completará la afiliación automáticamente con los datos que llenaste.</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <script>
+    // Trigger GitHub Actions
+    async function ejecutarRPA() {
+      const btn = document.getElementById('btn-ejecutar');
+      if (!btn) return;
+      btn.disabled = true;
+      btn.textContent = '⏳ Iniciando...';
+      try {
+        const resp = await fetch('/ejecutar', { method: 'POST' });
+        const data = await resp.json();
+        btn.textContent = data.ok ? '✅ Iniciado' : '❌ Error';
+        alert(data.mensaje);
+        if (data.ok) setTimeout(() => location.reload(), 3000);
+      } catch (e) {
+        btn.textContent = '❌ Error';
+        alert('No se pudo conectar con el servidor.');
+      }
+      setTimeout(() => { btn.disabled = false; btn.textContent = '▶ Ejecutar ahora'; }, 5000);
+    }
+
+    // Filtrado de tabla por estado
+    document.querySelectorAll('.btn-filtro').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        const estado = this.dataset.estado;
+        document.querySelectorAll('tbody tr').forEach(row => {
+          if (estado === 'todos' || row.classList.contains(`fila-estado-${estado}`)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

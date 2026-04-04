@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Completar datos — {{ a.nombre_empleado }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="header-left">
+        <a href="{{ url_for('index') }}" class="back-link">← Volver al panel</a>
+        <h1>✏️ Completar Datos Faltantes</h1>
+        <p>{{ a.nombre_empleado }} · Documento: {{ a.documento_empleado }}</p>
+      </div>
+    </div>
+
+    <!-- Info del empleado -->
+    <div class="info-card">
+      <div class="info-row">
+        <span class="info-label">Empresa:</span>
+        <span>{{ a.empresa }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Cargo:</span>
+        <span>{{ a.datos_originales.cargo }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Fecha ingreso:</span>
+        <span>{{ a.datos_originales.fecha_ingreso }}</span>
+      </div>
+    </div>
+
+    <!-- Advertencias -->
+    {% if a.advertencias %}
+    <div class="alert alert-warning">
+      <strong>⚠️ Advertencias del sistema:</strong>
+      <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+        {% for adv in a.advertencias %}
+          <li>{{ adv }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Formulario de campos faltantes -->
+    <form method="POST" action="{{ url_for('editar', doc_id=a.id) }}">
+      <div class="section">
+        <h2>Campos que necesitas completar</h2>
+        <p class="subtitulo">El sistema no pudo obtener estos datos automáticamente. Por favor complétalos:</p>
+
+        {% for campo in campos_faltantes %}
+
+        {# Campos de error no editables — solo informar #}
+        {% if campo in ('formulario_invalido', 'error_inesperado') %}
+        <div class="campo-grupo">
+          <div class="alert alert-warning">
+            ⚠️ {{ labels.get(campo, campo) }}<br>
+            <small>Revisa los logs del sistema. Al guardar esta pantalla se marcará para reintento.</small>
+          </div>
+        </div>
+
+        {% else %}
+        <div class="campo-grupo">
+          <label for="{{ campo }}" class="campo-label">
+            {{ labels.get(campo, campo) }}
+            <span class="requerido">*</span>
+          </label>
+
+          {% if campo in opciones_campos %}
+            <!-- Dropdown con opciones fijas -->
+            <select name="{{ campo }}" id="{{ campo }}" class="campo-input">
+              <option value="">— Selecciona —</option>
+              {% for opcion in opciones_campos[campo] %}
+                <option value="{{ opcion }}"
+                  {% if valores_actuales.get(campo) == opcion %}selected{% endif %}>
+                  {{ opcion }}
+                </option>
+              {% endfor %}
+            </select>
+
+          {% elif campo in ('fecha_nacimiento', 'fecha_inicio_cobertura') %}
+            <!-- Campo de fecha -->
+            <input
+              type="text"
+              name="{{ campo }}"
+              id="{{ campo }}"
+              class="campo-input"
+              placeholder="dd/mm/yyyy — Ej: 15/03/1990"
+              value="{{ valores_actuales.get(campo, '') }}"
+              pattern="\d{2}/\d{2}/\d{4}"
+            >
+            <small class="campo-ayuda">Formato: día/mes/año (Ej: 15/03/1990)</small>
+
+          {% elif campo == 'salario' %}
+            <!-- Campo numérico -->
+            <input
+              type="number"
+              name="{{ campo }}"
+              id="{{ campo }}"
+              class="campo-input"
+              placeholder="Ej: 3000000"
+              value="{{ valores_actuales.get(campo, '') }}"
+              min="1000000"
+            >
+
+          {% elif campo == 'tipo_salario' %}
+            <!-- Radio F / V -->
+            <select name="{{ campo }}" id="{{ campo }}" class="campo-input">
+              <option value="F" {% if valores_actuales.get(campo, 'F') == 'F' %}selected{% endif %}>F — Fijo</option>
+              <option value="V" {% if valores_actuales.get(campo) == 'V' %}selected{% endif %}>V — Variable</option>
+            </select>
+
+          {% else %}
+            <!-- Texto libre -->
+            <input
+              type="text"
+              name="{{ campo }}"
+              id="{{ campo }}"
+              class="campo-input"
+              placeholder="{{ labels.get(campo, campo) }}"
+              value="{{ valores_actuales.get(campo, '') }}"
+            >
+          {% endif %}
+
+          <!-- Sugerencias del sistema si existen -->
+          {% set tx = a.datos_transformados %}
+          {% if campo == 'cargo_arl' and tx.get('cargo_sugerencias') %}
+            <div class="sugerencias">
+              <strong>💡 Sugerencias del sistema:</strong>
+              {% for sug in tx.cargo_sugerencias[:5] %}
+                <button type="button" class="btn-sugerencia"
+                  onclick="document.getElementById('{{ campo }}').value='{{ sug }}'">
+                  {{ sug }}
+                </button>
+              {% endfor %}
+            </div>
+          {% elif campo == 'eps' and tx.get('eps_sugerencias') %}
+            <div class="sugerencias">
+              <strong>💡 Sugerencias del sistema:</strong>
+              {% for sug in tx.eps_sugerencias[:5] %}
+                <button type="button" class="btn-sugerencia"
+                  onclick="document.getElementById('{{ campo }}').value='{{ sug }}'">
+                  {{ sug }}
+                </button>
+              {% endfor %}
+            </div>
+          {% elif campo == 'afp' and tx.get('afp_sugerencias') %}
+            <div class="sugerencias">
+              <strong>💡 Sugerencias del sistema:</strong>
+              {% for sug in tx.afp_sugerencias[:5] %}
+                <button type="button" class="btn-sugerencia"
+                  onclick="document.getElementById('{{ campo }}').value='{{ sug }}'">
+                  {{ sug }}
+                </button>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% endfor %}
+
+        <!-- Ya completados manualmente -->
+        {% if a.campos_manuales %}
+        <div class="campos-completados">
+          <h3>✅ Ya completados por ti:</h3>
+          {% for campo, valor in a.campos_manuales.items() %}
+            <div class="campo-completado">
+              <span class="campo-label">{{ labels.get(campo, campo) }}:</span>
+              <span class="campo-valor">{{ valor }}</span>
+            </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('detalle', doc_id=a.id) }}" class="btn btn-outline">
+          Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary">
+          💾 Guardar y marcar para reintento
+        </button>
+      </div>
+    </form>
+
+  </div>
+</body>
+</html>

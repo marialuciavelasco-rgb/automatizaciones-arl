@@ -1,0 +1,13 @@
+{
+  "completado": true,
+  "dropdowns_descubiertos": [
+    "empresas",
+    "tipos_cotizante",
+    "tipos_documento"
+  ],
+  "total_opciones": {
+    "empresas": 2,
+    "tipos_cotizante": 26,
+    "tipos_documento": 4
+  }
+}

@@ -1,0 +1,25 @@
+# Credenciales — NUNCA subir
+.env
+config/firebase_key.json
+config/sheets_key.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Logs y screenshots
+logs/*.log
+screenshots/*.png
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
