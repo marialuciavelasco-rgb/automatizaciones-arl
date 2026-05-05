@@ -43,9 +43,15 @@ _MESES = {
 
 def _get_client() -> gspread.Client:
     """Crea un cliente gspread autenticado con service account (solo lectura)."""
-    creds = Credentials.from_service_account_file(
-        str(GOOGLE_SHEETS_CREDENTIALS_PATH), scopes=_SCOPES
-    )
+    import os, json
+    sheets_key_json = os.getenv("SHEETS_KEY_JSON", "")
+    if sheets_key_json:
+        cred_dict = json.loads(sheets_key_json)
+        creds = Credentials.from_service_account_info(cred_dict, scopes=_SCOPES)
+    else:
+        creds = Credentials.from_service_account_file(
+            str(GOOGLE_SHEETS_CREDENTIALS_PATH), scopes=_SCOPES
+        )
     return gspread.authorize(creds)
 
 
@@ -91,10 +97,13 @@ def _encontrar_hoja_mas_reciente(hojas: list) -> str:
 def sheets_disponible() -> bool:
     """
     Verifica si Google Sheets está configurado (sin hacer llamadas de red).
-    Retorna True si GOOGLE_SHEETS_ID y las credenciales existen en disco.
+    Acepta credenciales como variable de entorno SHEETS_KEY_JSON o como archivo en disco.
     """
+    import os
     if not GOOGLE_SHEETS_ID:
         return False
+    if os.getenv("SHEETS_KEY_JSON"):
+        return True
     if not GOOGLE_SHEETS_CREDENTIALS_PATH:
         return False
     if not GOOGLE_SHEETS_CREDENTIALS_PATH.exists():

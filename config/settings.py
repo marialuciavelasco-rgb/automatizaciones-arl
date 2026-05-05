@@ -9,9 +9,12 @@ BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
 EXCEL_INPUT_DIR = DATA_DIR / "excel_input"
 PORTAL_OPTIONS_DIR = DATA_DIR / "portal_options"
-LOGS_DIR = BASE_DIR / "logs"
-SCREENSHOTS_DIR = BASE_DIR / "screenshots"
 FIREBASE_KEY_PATH = BASE_DIR / "config" / "firebase_key.json"
+
+# En Lambda el filesystem es de solo lectura excepto /tmp
+_IS_LAMBDA = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+LOGS_DIR = Path("/tmp/logs") if _IS_LAMBDA else BASE_DIR / "logs"
+SCREENSHOTS_DIR = Path("/tmp/screenshots") if _IS_LAMBDA else BASE_DIR / "screenshots"
 
 # Portal ARL
 ARL_URL = "https://arlonline.segurosbolivar.com/portal/arl/#/home"

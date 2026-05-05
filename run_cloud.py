@@ -88,5 +88,11 @@ async def main():
     logger.info("=" * 60)
 
 
+def lambda_handler(event=None, context=None):
+    """AWS Lambda entry point."""
+    asyncio.run(main())
+    return {"statusCode": 200, "body": "Proceso completado"}
+
+
 if __name__ == "__main__":
     asyncio.run(main())
