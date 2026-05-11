@@ -2,6 +2,7 @@
 .env
 config/firebase_key.json
 config/sheets_key.json
+config/*firebase-adminsdk*.json
 
 # Python
 __pycache__/
