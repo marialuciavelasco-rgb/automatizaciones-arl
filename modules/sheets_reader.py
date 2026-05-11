@@ -4,10 +4,8 @@ Lee el Google Sheet de Notificaciones Nómina Buk.
 
 ⚠️  SOLO LECTURA — este módulo NUNCA escribe en el Sheet.
     Todo el estado se gestiona en Firebase.
-
-Retorna exactamente el mismo formato que excel_reader.leer_excel()
-para que el resto del sistema funcione igual sin importar la fuente.
 """
+import re
 import pandas as pd
 from datetime import datetime
 from loguru import logger
@@ -16,7 +14,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 from config.settings import GOOGLE_SHEETS_ID, GOOGLE_SHEETS_CREDENTIALS_PATH
-from modules.excel_reader import _procesar_fila
 
 
 # Solo lectura — nunca escritura
@@ -209,3 +206,107 @@ def leer_sheets(nombre_hoja: str = None) -> dict:
         "hoja_usada":  nombre_hoja,
         "total_filas": len(df),
     }
+
+
+# ─────────────────────────────────────────────────────────────────────
+# PROCESAMIENTO DE FILAS (antes en excel_reader.py)
+# ─────────────────────────────────────────────────────────────────────
+
+def encontrar_columna(df_cols: list, nombre_buscado: str):
+    """Busca una columna ignorando mayúsculas y espacios extra."""
+    nombre_clean = nombre_buscado.strip().lower()
+    for col in df_cols:
+        if str(col).strip().lower() == nombre_clean:
+            return col
+    return None
+
+
+def _procesar_fila(row: pd.Series, columnas: list, fila_num: int) -> tuple:
+    """Procesa una fila del Sheet. Retorna (registro, errores)."""
+    errores = []
+
+    def get(nombre_excel: str, requerido: bool = False) -> str:
+        col = encontrar_columna(columnas, nombre_excel)
+        if col is None:
+            col = encontrar_columna(columnas, nombre_excel + " ")
+        if col is None:
+            if requerido:
+                errores.append({"fila": fila_num, "campo": nombre_excel, "error": "Columna no encontrada"})
+            return ""
+        val = str(row.get(col, "")).strip()
+        if val in ("nan", "None", "NaT"):
+            val = ""
+        return val
+
+    colaborador = get("Colaborador", requerido=True)
+    if not colaborador:
+        return None, [{"fila": fila_num, "campo": "Colaborador", "error": "Nombre vacío"}]
+
+    colaborador_clean = colaborador.strip()
+    if (colaborador_clean.isdigit() or
+            len(colaborador_clean) < 5 or
+            colaborador_clean.lower() in ("nan", "none", "total", "subtotal")):
+        return None, []
+
+    colaborador_clean = re.sub(r'\(.*?\)', '', colaborador_clean).strip().upper()
+
+    numero_doc = get("Número de documento", requerido=True)
+    numero_doc = re.sub(r'[^\d]', '', numero_doc)
+    if not numero_doc:
+        errores.append({"fila": fila_num, "campo": "Número de documento", "error": "Documento vacío"})
+
+    compania = get("Compañía") or get("Empresa")
+    genero = get("Género")
+
+    salario_str = get("Salario")
+    salario = 0
+    try:
+        salario = int(float(salario_str.replace(",", "").replace(".", "")) if salario_str else 0)
+    except ValueError:
+        errores.append({"fila": fila_num, "campo": "Salario", "error": f"Valor no numérico: {salario_str}"})
+
+    fecha_ingreso = get("Fecha de ingreso")
+    cargo = get("Cargo")
+    tipo_doc = get("Tipo de documento") or "CC"
+    telefono = re.sub(r'[^\d]', '', get("Teléfono"))
+    email = get("Email Personal")
+    ciudad = get("Ciudad de servicio ") or get("Ciudad de servicio")
+    direccion = get("Dirección")
+    eps = get("EPS")
+    afp = get("Pensiones")
+    aux_rod = get("Aux. Rodamiento")
+
+    arl_ya_afiliado = False
+    arl_col = encontrar_columna(columnas, "ARL")
+    if arl_col:
+        try:
+            col_idx = columnas.index(arl_col)
+            arl_val = str(row.iloc[col_idx]).strip().lower()
+            arl_ya_afiliado = arl_val not in ("", "nan", "none", "nat")
+        except Exception:
+            arl_ya_afiliado = False
+
+    if arl_ya_afiliado:
+        logger.debug(f"Fila {fila_num}: {colaborador_clean} — ya tiene ARL, omitiendo")
+        return None, []
+
+    registro = {
+        "fila_excel":     fila_num,
+        "colaborador":    colaborador_clean,
+        "genero":         genero,
+        "salario":        salario,
+        "aux_rodamiento": aux_rod,
+        "fecha_ingreso":  fecha_ingreso,
+        "cargo":          cargo,
+        "tipo_doc":       tipo_doc.upper().strip() if tipo_doc else "CC",
+        "numero_doc":     numero_doc,
+        "telefono":       telefono,
+        "email":          email.lower().strip() if email else "",
+        "ciudad":         ciudad.upper().strip() if ciudad else "",
+        "direccion":      direccion,
+        "eps":            eps.strip() if eps else "",
+        "afp":            afp.strip() if afp else "",
+        "compania":       compania.upper().strip() if compania else "",
+    }
+
+    return registro, errores
