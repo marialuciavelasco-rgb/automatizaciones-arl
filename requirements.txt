@@ -1,7 +1,6 @@
 playwright==1.44.0
 firebase-admin==6.5.0
 pandas==2.1.4
-openpyxl==3.1.2
 thefuzz==0.22.1
 python-Levenshtein==0.25.1
 python-dotenv==1.0.1
