@@ -1,0 +1,4 @@
+dashboard/templates/* linguist-vendored
+dashboard/static/* linguist-vendored
+*.sh linguist-detectable=false
+*.bat linguist-detectable=false
