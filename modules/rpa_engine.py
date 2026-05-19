@@ -12,7 +12,7 @@ from config.settings import (
     ARL_USUARIO, ARL_PASSWORD, HEADLESS, TIMEOUT_MS,
     PORTAL_OPTIONS_DIR, MAX_INTENTOS
 )
-import modules.firebase_client as fb
+import modules.db_client as fb
 from modules.form_filler import (
     hacer_login, navegar_a_afiliacion, _volver_al_home,
     llenar_formulario_inicial, llenar_datos_personales,
@@ -84,13 +84,12 @@ async def descubrir_opciones_portal(page: Page):
 
 async def procesar_afiliacion(page: Page, doc_id: str) -> dict:
     """
-    Ejecuta el proceso completo de afiliación para un documento Firebase.
+    Ejecuta el proceso completo de afiliación para un registro de la DB.
     Retorna: {exito: bool, mensaje: str}
     """
-    # Cargar datos desde Firebase
     afiliacion = fb.obtener_por_id(doc_id)
     if not afiliacion:
-        return {"exito": False, "mensaje": f"Documento {doc_id} no encontrado en Firebase"}
+        return {"exito": False, "mensaje": f"Documento {doc_id} no encontrado en la base de datos"}
 
     nombre = afiliacion.get("nombre_empleado", "Desconocido")
     logger.info(f"━━━ Procesando: {nombre} ━━━")

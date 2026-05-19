@@ -3,7 +3,7 @@ Módulo: sheets_reader.py
 Lee el Google Sheet de Notificaciones Nómina Buk.
 
 ⚠️  SOLO LECTURA — este módulo NUNCA escribe en el Sheet.
-    Todo el estado se gestiona en Firebase.
+    Todo el estado se gestiona en la base de datos (SQLite).
 """
 import re
 import pandas as pd
@@ -130,7 +130,7 @@ def leer_sheets(nombre_hoja: str = None) -> dict:
             "total_filas": N,       # total filas con datos (sin encabezado)
         }
 
-    ⚠️  NUNCA escribe en el Sheet — todo el estado va a Firebase.
+    ⚠️  NUNCA escribe en el Sheet — todo el estado va a la base de datos.
     Las filas con columna ARL ya rellena se omiten automáticamente
     (misma lógica que excel_reader._procesar_fila).
     """

@@ -1,8 +1,12 @@
 # Credenciales — NUNCA subir
 .env
-config/firebase_key.json
 config/sheets_key.json
-config/*firebase-adminsdk*.json
+
+# Base de datos local — no commitear el estado
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Python
 __pycache__/

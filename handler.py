@@ -3,7 +3,7 @@ handler.py — Entry point de AWS Lambda y GitHub Actions.
 
 Flujo:
 1. Lee empleados del Google Sheet (AutomatizacionesRRHH > pestaña Sync)
-2. Guarda/actualiza en Firebase los que están pendientes
+2. Guarda/actualiza en la base de datos los que están pendientes
 3. Ejecuta el RPA headless para todos los pendientes
 """
 import asyncio
@@ -35,9 +35,9 @@ async def main():
         logger.info("No hay registros para procesar. Finalizando.")
         return
 
-    # 2. Transformar y guardar en Firebase
+    # 2. Transformar y guardar en la base de datos
     from modules.transformer import transformar_lote
-    import modules.firebase_client as fb
+    import modules.db_client as fb
 
     transformados = transformar_lote(registros)
     nuevos = actualizados = 0
@@ -63,7 +63,7 @@ async def main():
         else:
             nuevos += 1
 
-    logger.info(f"Firebase: {nuevos} nuevos | {actualizados} actualizados")
+    logger.info(f"DB: {nuevos} nuevos | {actualizados} actualizados")
 
     # 3. Obtener pendientes y ejecutar RPA
     from modules.rpa_engine import ejecutar_proceso_completo

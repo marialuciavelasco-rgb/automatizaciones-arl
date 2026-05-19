@@ -9,7 +9,6 @@ BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
 EXCEL_INPUT_DIR = DATA_DIR / "excel_input"
 PORTAL_OPTIONS_DIR = DATA_DIR / "portal_options"
-FIREBASE_KEY_PATH = BASE_DIR / "config" / "firebase_key.json"
 
 # En Lambda el filesystem es de solo lectura excepto /tmp
 _IS_LAMBDA = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
@@ -21,8 +20,16 @@ ARL_URL = "https://arlonline.segurosbolivar.com/portal/arl/#/home"
 ARL_USUARIO = os.getenv("ARL_USUARIO", "")
 ARL_PASSWORD = os.getenv("ARL_PASSWORD", "")
 
-# Firebase
-FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "")
+# SQLite — ruta del archivo de base de datos.
+# En Lambda usar EFS (p.ej. /mnt/efs/afiliaciones.db) si se requiere
+# persistencia entre invocaciones; /tmp solo dura mientras el contenedor
+# está caliente.
+_sqlite_raw = os.getenv("SQLITE_DB_PATH", "")
+if _sqlite_raw:
+    _p = Path(_sqlite_raw)
+    SQLITE_DB_PATH = _p if _p.is_absolute() else BASE_DIR / _p
+else:
+    SQLITE_DB_PATH = (Path("/tmp") if _IS_LAMBDA else DATA_DIR) / "afiliaciones.db"
 
 # Google Sheets (opcional — si no está configurado, se usa Excel local)
 # GOOGLE_SHEETS_ID: el ID del spreadsheet, visible en la URL:
