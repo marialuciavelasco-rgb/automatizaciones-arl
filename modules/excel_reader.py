@@ -189,21 +189,20 @@ def _procesar_fila(row: pd.Series, columnas: list, fila_num: int) -> tuple:
     aux_rod = get("Aux. Rodamiento")
 
     # ── ARL Status ────────────────────────────────
-    # Verificamos si ya tiene ARL usando la columna "ARL" directamente
-    # (valor NaN = sin afiliar, cualquier texto = ya afiliado)
+    # Usamos la columna "Status" inmediatamente después de "ARL" para saber
+    # si el trámite está completo. La columna "ARL" solo indica la aseguradora
+    # y puede estar pre-llenada aunque el empleado no esté inscrito todavía.
     arl_ya_afiliado = False
-    arl_col = encontrar_columna(columnas, "ARL")
-    if arl_col:
-        # Con columnas duplicadas, iloc es más seguro que row.get()
+    status_idx = _encontrar_columna_arl_status(columnas, row)
+    if status_idx is not None:
         try:
-            col_idx = columnas.index(arl_col)
-            arl_val = str(row.iloc[col_idx]).strip().lower()
-            arl_ya_afiliado = arl_val not in ("", "nan", "none", "nat")
+            status_val = str(row.iloc[status_idx]).strip().lower()
+            arl_ya_afiliado = status_val in ("si", "sí", "yes", "completado", "creado", "afiliado")
         except Exception:
             arl_ya_afiliado = False
 
     if arl_ya_afiliado:
-        logger.debug(f"Fila {fila_num}: {colaborador_clean} - Ya tiene ARL registrado, omitiendo")
+        logger.debug(f"Fila {fila_num}: {colaborador_clean} - ARL Status completado, omitiendo")
         return None, []
 
     registro = {
@@ -228,16 +227,21 @@ def _procesar_fila(row: pd.Series, columnas: list, fila_num: int) -> tuple:
     return registro, errores
 
 
-def _encontrar_columna_arl_status(columnas: list, row: pd.Series) -> object:
+def _encontrar_columna_arl_status(columnas: list, row: pd.Series):
     """
-    Busca la columna de Status correspondiente a ARL.
-    En el Excel hay múltiples columnas 'Status', la de ARL es la tercera.
+    Retorna el índice de la columna Status que está inmediatamente después de ARL.
+    No usa .index() porque hay múltiples columnas llamadas 'Status'.
     """
-    # En el Excel, después de la columna "ARL" viene su "Status"
-    status_cols = [c for c in columnas if 'status' in str(c).lower()]
-    # La tercera columna Status (índice 2) corresponde a ARL según el diseño del Excel
-    if len(status_cols) >= 3:
-        return status_cols[2]
+    arl_idx = None
+    for i, col in enumerate(columnas):
+        if str(col).strip().lower() == "arl":
+            arl_idx = i
+            break
+    if arl_idx is None:
+        return None
+    for i in range(arl_idx + 1, len(columnas)):
+        if str(columnas[i]).strip().lower() == "status":
+            return i
     return None
 
 
