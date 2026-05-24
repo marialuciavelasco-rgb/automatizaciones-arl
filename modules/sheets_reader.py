@@ -28,6 +28,9 @@ _SCOPES = [
 _HOJAS_EXCLUIDAS = {
     "NVScriptsProperties",
     "DO NOT DELETE - AutoCrat Job Se",
+    "Sync",
+    "SyncLog",
+    "Sheet1",
 }
 
 _MESES = {
@@ -86,8 +89,14 @@ def _encontrar_hoja_mas_reciente(hojas: list) -> str:
         hojas_con_fecha.sort(key=lambda x: x[0])
         return hojas_con_fecha[-1][1]
 
-    # Fallback: última hoja en el orden del spreadsheet
-    return hojas_validas[-1]
+    # Fallback: buscar hoja con "rrhh" o "nomina" en el nombre
+    _PALABRAS_DATOS = ("rrhh", "nomina", "nómina", "empleados", "colaboradores")
+    for hoja in hojas_validas:
+        if any(p in hoja.lower() for p in _PALABRAS_DATOS):
+            return hoja
+
+    # Último recurso: primera hoja válida
+    return hojas_validas[0]
 
 
 # ─────────────────────────────────────────────────────────────────────
