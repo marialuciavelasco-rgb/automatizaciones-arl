@@ -1,0 +1,70 @@
+# Todo lo que no participa en el dashboard — reduce tamaño del bundle
+# y previene que suban archivos grandes o sensibles.
+
+# Entornos virtuales (enormes, nunca al deploy)
+venv/
+.venv/
+
+# Git
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Playwright / RPA — se ejecutan en GitHub Actions, no en Vercel
+playwright/
+screenshots/
+logs/
+
+# Datos locales (Excel, base SQLite si existiera)
+data/excel_input/
+data/portal_options/
+data/*.db
+data/*.db-*
+
+# Scripts de nube que no son el dashboard
+run_cloud.py
+handler.py
+main.py
+Dockerfile
+render.yaml
+ejecutar_mac.sh
+ejecutar_windows.bat
+instalar_mac.sh
+instalar_windows.bat
+
+# Utilidades locales
+limpiar_duplicados.py
+diagnostico_firebase.py
+diagnostico_db.py
+diagnostico_sheets.py
+
+# Docs (opcionales de subir; no rompen si van pero ocupan)
+*.md
+!DEPLOY_VERCEL.md
+
+# Google Apps Script
+SYNC_SCRIPT.gs
+
+# Credenciales locales (los secrets van por Vercel Environment Variables)
+.env
+.env.*
+!.env.example
+config/firebase_key.json
+config/sheets_key.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Claude memory
+.claude/
